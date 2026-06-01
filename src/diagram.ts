@@ -4,11 +4,19 @@ const MAX_NODES = 60;
 const WRAP_AT = 24; // chars per line before wrapping
 const HARD_CAP = 160; // absolute safety limit
 
+/** Escape characters that are invalid in mermaid's HTML node labels. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /** Sanitize a heading and wrap it onto multiple lines so nothing is cut off. */
 function label(text: string): string {
   let t = text
     .replace(/["#]/g, "")
-    .replace(/[<>]/g, "")
     .replace(/[{}[\]()|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -26,7 +34,8 @@ function label(text: string): string {
     }
   }
   if (cur) lines.push(cur);
-  return lines.join("<br/>");
+  // Escape each line (mermaid renders these as HTML), then join with <br/>.
+  return lines.map(escapeHtml).join("<br/>");
 }
 
 /**
