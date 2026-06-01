@@ -307,11 +307,74 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* document map (auto-generated) */
+.docmap {
+  margin: 0 0 2em;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff, #ffffff);
+  overflow: hidden;
+}
+.docmap-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.docmap-title {
+  font-weight: 700;
+}
+.docmap-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.docmap-toggle {
+  margin-left: auto;
+  padding: 3px 10px;
+}
+.docmap .mermaid-card {
+  margin: 0;
+}
+
 /* mermaid */
+.mermaid-card {
+  position: relative;
+  margin: 1.5em 0;
+}
+.mermaid-card:hover .mermaid-expand {
+  opacity: 1;
+}
+.mermaid-expand {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.mermaid-expand:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
 .mermaid-diagram {
   display: flex;
   justify-content: center;
-  margin: 1.5em 0;
+  margin: 0;
   padding: 16px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -324,6 +387,73 @@ body {
 }
 .mermaid-error {
   margin: 1.5em 0;
+}
+
+/* zoom / pan modal */
+.zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(13, 17, 23, 0.72);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+}
+.zoom-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.zoom-toolbar button {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 14px;
+  min-width: 38px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.zoom-toolbar button:hover {
+  background: var(--bg);
+}
+.zoom-pct {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 48px;
+  text-align: center;
+}
+.zoom-close {
+  margin-left: auto;
+}
+.zoom-stage {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+.zoom-stage:active {
+  cursor: grabbing;
+}
+.zoom-content {
+  transform-origin: center center;
+  transition: transform 0.05s linear;
+}
+.zoom-content svg {
+  max-width: none;
+  height: auto;
+}
+.zoom-hint {
+  text-align: center;
+  color: #c9d1d9;
+  font-size: 12px;
+  padding: 8px;
 }
 .mermaid-error-label {
   color: #cf222e;

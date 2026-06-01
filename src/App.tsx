@@ -3,36 +3,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
-import GithubSlugger from "github-slugger";
 import { Mermaid } from "./Mermaid";
-
-type TocItem = { depth: number; text: string; id: string };
-
-/** Pull headings out of the raw markdown, skipping fenced code blocks. */
-function buildToc(md: string): TocItem[] {
-  const slugger = new GithubSlugger();
-  const items: TocItem[] = [];
-  let inFence = false;
-  for (const raw of md.split("\n")) {
-    const line = raw.trimEnd();
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFence = !inFence;
-      continue;
-    }
-    if (inFence) continue;
-    const m = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (!m) continue;
-    const depth = m[1].length;
-    // strip inline markdown decorations for a clean label
-    const text = m[2]
-      .replace(/[*_`~]/g, "")
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      .trim();
-    if (!text) continue;
-    items.push({ depth, text, id: slugger.slug(text) });
-  }
-  return items;
-}
+import { parseHeadings } from "./markdown";
+import { structureToMermaid } from "./diagram";
 
 function readableSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -45,6 +18,7 @@ export default function App() {
   const [fileName, setFileName] = useState<string>("");
   const [fileSize, setFileSize] = useState<number>(0);
   const [dragging, setDragging] = useState(false);
+  const [showMap, setShowMap] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const loadFile = useCallback((file: File) => {
@@ -68,7 +42,11 @@ export default function App() {
     [loadFile]
   );
 
-  const toc = useMemo(() => (content ? buildToc(content) : []), [content]);
+  const toc = useMemo(() => (content ? parseHeadings(content) : []), [content]);
+  const structureChart = useMemo(
+    () => (toc.length ? structureToMermaid(toc, fileName) : null),
+    [toc, fileName]
+  );
 
   const components = useMemo(
     () => ({
@@ -178,6 +156,21 @@ export default function App() {
             </aside>
           )}
           <main className="doc markdown-body">
+            {structureChart && (
+              <section className="docmap">
+                <div className="docmap-head">
+                  <span className="docmap-title">🗺️ Document Map</span>
+                  <span className="docmap-tag">auto-generated</span>
+                  <button
+                    className="btn docmap-toggle"
+                    onClick={() => setShowMap((v) => !v)}
+                  >
+                    {showMap ? "Hide" : "Show"}
+                  </button>
+                </div>
+                {showMap && <Mermaid chart={structureChart} />}
+              </section>
+            )}
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw, rehypeSlug]}
