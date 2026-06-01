@@ -1,9 +1,10 @@
 import type { Heading } from "./markdown";
 
 const MAX_NODES = 60;
-const MAX_LABEL = 42;
+const WRAP_AT = 24; // chars per line before wrapping
+const HARD_CAP = 160; // absolute safety limit
 
-/** Sanitize a heading into a safe mermaid node label. */
+/** Sanitize a heading and wrap it onto multiple lines so nothing is cut off. */
 function label(text: string): string {
   let t = text
     .replace(/["#]/g, "")
@@ -11,8 +12,21 @@ function label(text: string): string {
     .replace(/[{}[\]()|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (t.length > MAX_LABEL) t = t.slice(0, MAX_LABEL - 1).trimEnd() + "…";
-  return t || " ";
+  if (!t) return " ";
+  if (t.length > HARD_CAP) t = t.slice(0, HARD_CAP - 1).trimEnd() + "…";
+
+  const lines: string[] = [];
+  let cur = "";
+  for (const word of t.split(" ")) {
+    if (cur && cur.length + 1 + word.length > WRAP_AT) {
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = cur ? `${cur} ${word}` : word;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines.join("<br/>");
 }
 
 /**

@@ -1,11 +1,14 @@
 import { useEffect, useId, useRef, useState } from "react";
 import mermaid from "mermaid";
 
+// NOTE: do NOT set fontFamily to "inherit". Mermaid measures label widths with
+// the configured font; if the rendered (inherited) font is wider, node boxes come
+// out too narrow and text is clipped. Use Mermaid's own consistent default font.
 mermaid.initialize({
   startOnLoad: false,
   securityLevel: "loose",
-  fontFamily: "inherit",
   theme: "base",
+  flowchart: { htmlLabels: true, wrappingWidth: 220 },
   themeVariables: {
     primaryColor: "#ddf4ff",
     primaryTextColor: "#0a3069",
@@ -16,6 +19,12 @@ mermaid.initialize({
     fontSize: "15px",
   },
 });
+
+// Render only after web fonts are loaded so width measurement matches what paints.
+const fontsReady: Promise<unknown> =
+  typeof document !== "undefined" && "fonts" in document
+    ? (document as Document).fonts.ready
+    : Promise.resolve();
 
 /** Renders a Mermaid block as SVG, with a colored theme and a zoomable fullscreen view. */
 export function Mermaid({ chart }: { chart: string }) {
@@ -29,8 +38,8 @@ export function Mermaid({ chart }: { chart: string }) {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    mermaid
-      .render(id, chart)
+    fontsReady
+      .then(() => mermaid.render(id, chart))
       .then((res) => {
         if (!cancelled) setSvg(res.svg);
       })
