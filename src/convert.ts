@@ -4,7 +4,15 @@
 //   .tsv / .csv -> a GitHub-flavored markdown table
 // Anything else (md/markdown/mdx/txt) is passed through unchanged.
 
-import { parseSchema, schemaToMarkdown } from "./sql";
+import { parseSchema, buildSchemaDoc } from "./sql";
+
+// How many table sections render per page for a SQL schema. Large dumps
+// (hundreds of tables) freeze the browser if mounted all at once.
+const TABLES_PER_PAGE = 25;
+
+export type Renderable =
+  | { kind: "single"; markdown: string }
+  | { kind: "paged"; header: string; pages: string[]; tableCount: number };
 
 function parseDelimited(text: string, delim: string): string[][] {
   const rows: string[][] = [];
@@ -68,13 +76,20 @@ function delimitedToTable(text: string, delim: string): string {
   return lines.join("\n");
 }
 
-export function toRenderableMarkdown(raw: string, fileName: string): string {
+export function toRenderable(raw: string, fileName: string): Renderable {
   const ext = fileName.split(".").pop()?.toLowerCase();
   if (ext === "sql") {
-    const schema = schemaToMarkdown(parseSchema(raw), fileName);
-    return schema ?? "```sql\n" + raw.replace(/\n$/, "") + "\n```";
+    const doc = buildSchemaDoc(parseSchema(raw), fileName, TABLES_PER_PAGE);
+    if (!doc) {
+      // No CREATE TABLE — just a query. Show it as a code block.
+      return { kind: "single", markdown: "```sql\n" + raw.replace(/\n$/, "") + "\n```" };
+    }
+    if (doc.pages.length <= 1) {
+      return { kind: "single", markdown: `${doc.header}\n\n${doc.pages[0] ?? ""}` };
+    }
+    return { kind: "paged", header: doc.header, pages: doc.pages, tableCount: doc.tableCount };
   }
-  if (ext === "tsv") return delimitedToTable(raw, "\t");
-  if (ext === "csv") return delimitedToTable(raw, ",");
-  return raw;
+  if (ext === "tsv") return { kind: "single", markdown: delimitedToTable(raw, "\t") };
+  if (ext === "csv") return { kind: "single", markdown: delimitedToTable(raw, ",") };
+  return { kind: "single", markdown: raw };
 }

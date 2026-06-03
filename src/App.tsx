@@ -6,7 +6,7 @@ import rehypeSlug from "rehype-slug";
 import { Mermaid } from "./Mermaid";
 import { parseHeadings } from "./markdown";
 import { structureToMermaid } from "./diagram";
-import { toRenderableMarkdown } from "./convert";
+import { toRenderable } from "./convert";
 import {
   addEntry,
   clearHistory,
@@ -43,6 +43,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory());
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [page, setPage] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const showEntry = useCallback((entry: HistoryEntry) => {
@@ -50,6 +51,7 @@ export default function App() {
     setFileName(entry.name);
     setFileSize(entry.size);
     setActiveId(entry.id);
+    setPage(0);
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -140,11 +142,27 @@ export default function App() {
     );
   }, [history, query]);
 
-  const markdown = useMemo(
-    () => (content ? toRenderableMarkdown(content, fileName) : ""),
+  const rendered = useMemo(
+    () => (content ? toRenderable(content, fileName) : null),
     [content, fileName]
   );
+  const totalPages = rendered?.kind === "paged" ? rendered.pages.length : 1;
+  // Clamp instead of trusting `page` directly — the doc may have changed.
+  const safePage = Math.min(Math.max(page, 0), totalPages - 1);
+  const markdown = useMemo(() => {
+    if (!rendered) return "";
+    if (rendered.kind === "single") return rendered.markdown;
+    return `${rendered.header}\n\n${rendered.pages[safePage] ?? ""}`;
+  }, [rendered, safePage]);
   const toc = useMemo(() => (markdown ? parseHeadings(markdown) : []), [markdown]);
+
+  // Reset to the first page whenever a different document is shown.
+  useEffect(() => setPage(0), [content, fileName]);
+
+  const goToPage = useCallback((p: number) => {
+    setPage(p);
+    window.scrollTo({ top: 0 });
+  }, []);
   const structureChart = useMemo(
     () => (toc.length ? structureToMermaid(toc, fileName) : null),
     [toc, fileName]
@@ -349,6 +367,28 @@ export default function App() {
                 </aside>
               )}
               <main className="doc markdown-body">
+                {rendered?.kind === "paged" && (
+                  <div className="pager">
+                    <button
+                      className="btn"
+                      disabled={safePage === 0}
+                      onClick={() => goToPage(safePage - 1)}
+                    >
+                      ← Prev
+                    </button>
+                    <span className="pager-info">
+                      Page <strong>{safePage + 1}</strong> of {totalPages} ·{" "}
+                      {rendered.tableCount} tables
+                    </span>
+                    <button
+                      className="btn"
+                      disabled={safePage >= totalPages - 1}
+                      onClick={() => goToPage(safePage + 1)}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
                 {structureChart && (
                   <section className="docmap">
                     <div className="docmap-head">
@@ -371,6 +411,27 @@ export default function App() {
                 >
                   {markdown}
                 </ReactMarkdown>
+                {rendered?.kind === "paged" && totalPages > 1 && (
+                  <div className="pager pager-bottom">
+                    <button
+                      className="btn"
+                      disabled={safePage === 0}
+                      onClick={() => goToPage(safePage - 1)}
+                    >
+                      ← Prev
+                    </button>
+                    <span className="pager-info">
+                      Page <strong>{safePage + 1}</strong> of {totalPages}
+                    </span>
+                    <button
+                      className="btn"
+                      disabled={safePage >= totalPages - 1}
+                      onClick={() => goToPage(safePage + 1)}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
               </main>
             </div>
           )}

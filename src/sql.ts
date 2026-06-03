@@ -290,53 +290,74 @@ function erDiagram(tables: Table[]): string | null {
   return lines.join("\n");
 }
 
-/** Render a parsed schema as markdown. Returns null if there are no tables. */
-export function schemaToMarkdown(tables: Table[], fileName: string): string | null {
+/** Markdown for one table: heading + a contiguous GFM column table. */
+function tableBlock(t: Table, multiSchema: boolean): string {
+  const heading = multiSchema ? "###" : "##";
+  const parts = [`${heading} ${t.schema ? `${t.schema}.` : ""}${t.name}`];
+  // A GFM table must be one contiguous block — no blank lines between rows.
+  const rows = ["| Column | Type | Key | References |", "| --- | --- | --- | --- |"];
+  for (const c of t.columns) {
+    const key = [c.pk ? "🔑 PK" : "", c.fk ? "🔗 FK" : ""].filter(Boolean).join(" ");
+    const refs = c.fk
+      ? `${c.fk.table}${c.fk.cols.length ? `(${c.fk.cols.join(", ")})` : ""}`
+      : "";
+    rows.push(
+      `| ${escCell(c.name)} | ${escCell(c.type)}${c.notNull ? " · not null" : ""} | ${key} | ${escCell(refs)} |`
+    );
+  }
+  parts.push(rows.join("\n"));
+  return parts.join("\n\n");
+}
+
+export type SchemaDoc = {
+  /** Title, summary and (for small schemas) the ER diagram — shown on every page. */
+  header: string;
+  /** One markdown string per page; render only the current page to avoid
+   *  freezing the browser on huge schemas. */
+  pages: string[];
+  tableCount: number;
+};
+
+/**
+ * Build a paginated schema document. `pageSize` tables render per page so a
+ * dump with hundreds of tables never tries to mount them all at once.
+ * Returns null if there are no tables.
+ */
+export function buildSchemaDoc(
+  tables: Table[],
+  fileName: string,
+  pageSize: number
+): SchemaDoc | null {
   if (!tables.length) return null;
 
   const schemas = new Set(tables.map((t) => t.schema ?? ""));
   const multiSchema = schemas.size > 1 || (schemas.size === 1 && !schemas.has(""));
 
-  const out: string[] = [];
-  out.push(`# 🗃️ ${fileName}`);
-  out.push(
+  const head: string[] = [`# 🗃️ ${fileName}`];
+  head.push(
     `**${tables.length}** ${tables.length === 1 ? "table" : "tables"}` +
       (multiSchema ? ` across **${schemas.size}** schemas` : "")
   );
-
-  const er = erDiagram(tables);
+  const er = erDiagram(tables); // null when the schema is too large to draw
   if (er) {
-    out.push("## Entity-Relationship Diagram");
-    out.push("```mermaid\n" + er + "\n```");
-  } else if (tables.length > ER_MAX_TABLES) {
-    out.push(
-      `> _ER diagram omitted — ${tables.length} tables is too many to draw clearly. ` +
-        `Each table's structure is listed below._`
-    );
+    head.push("## Entity-Relationship Diagram");
+    head.push("```mermaid\n" + er + "\n```");
   }
 
-  let currentSchema: string | null | undefined;
-  for (const t of tables) {
-    if (multiSchema && t.schema !== currentSchema) {
-      currentSchema = t.schema;
-      out.push(`## ${currentSchema || "(no schema)"}`);
+  const pages: string[] = [];
+  for (let i = 0; i < tables.length; i += pageSize) {
+    const slice = tables.slice(i, i + pageSize);
+    const parts: string[] = [];
+    let currentSchema: string | null | undefined = Symbol() as never; // force first emit
+    for (const t of slice) {
+      if (multiSchema && t.schema !== currentSchema) {
+        currentSchema = t.schema;
+        parts.push(`## ${t.schema || "(no schema)"}`);
+      }
+      parts.push(tableBlock(t, multiSchema));
     }
-    const heading = multiSchema ? "###" : "##";
-    out.push(`${heading} ${t.schema ? `${t.schema}.` : ""}${t.name}`);
-    // A GFM table must be one contiguous block — no blank lines between rows.
-    const rows = ["| Column | Type | Key | References |", "| --- | --- | --- | --- |"];
-    for (const c of t.columns) {
-      const key = [c.pk ? "🔑 PK" : "", c.fk ? "🔗 FK" : ""]
-        .filter(Boolean)
-        .join(" ");
-      const refs = c.fk
-        ? `${c.fk.table}${c.fk.cols.length ? `(${c.fk.cols.join(", ")})` : ""}`
-        : "";
-      rows.push(
-        `| ${escCell(c.name)} | ${escCell(c.type)}${c.notNull ? " · not null" : ""} | ${key} | ${escCell(refs)} |`
-      );
-    }
-    out.push(rows.join("\n"));
+    pages.push(parts.join("\n\n"));
   }
-  return out.join("\n\n");
+
+  return { header: head.join("\n\n"), pages, tableCount: tables.length };
 }
