@@ -87,6 +87,213 @@ body {
 .btn:hover {
   background: var(--bg);
 }
+.iconbtn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--ink);
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+.iconbtn:hover {
+  background: var(--bg);
+}
+.linkbtn {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.linkbtn:hover {
+  text-decoration: underline;
+}
+
+/* persistent drop strip in the top bar */
+.dropstrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 7px 14px;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.dropstrip:hover,
+.dropstrip.dragging {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.dropstrip-icon {
+  font-size: 15px;
+}
+.fileinfo {
+  margin-left: 0;
+}
+
+/* full-window drop overlay while dragging onto an open doc */
+.drag-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(9, 105, 218, 0.12);
+  backdrop-filter: blur(1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.drag-overlay-card {
+  background: var(--panel);
+  border: 2px dashed var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 18px;
+  padding: 24px 40px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+/* ---------- shell: library sidebar + workspace ---------- */
+.shell {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  align-items: start;
+}
+.shell.sidebar-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+.shell.sidebar-collapsed .library {
+  display: none;
+}
+
+.library {
+  position: sticky;
+  top: 59px;
+  height: calc(100vh - 59px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 14px 12px;
+  overflow: hidden;
+}
+.library-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.library-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.library-count {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.library-head .linkbtn {
+  margin-left: auto;
+}
+.library-search {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  color: var(--ink);
+}
+.library-search:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--panel);
+}
+.library-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.library-empty {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 8px 6px;
+}
+.library-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.library-item:hover {
+  background: var(--bg);
+}
+.library-item.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.library-item-main {
+  min-width: 0;
+  flex: 1;
+}
+.library-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.library-item-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.library-del {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  padding: 2px 4px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+.library-item:hover .library-del {
+  opacity: 1;
+}
+.library-del:hover {
+  background: var(--panel);
+  color: #cf222e;
+}
+.workspace {
+  min-width: 0;
+}
 
 /* ---------- dropzone ---------- */
 .dropzone-wrap {
@@ -472,5 +679,27 @@ body {
   }
   .doc {
     padding: 24px 20px;
+  }
+  .shell {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .dropstrip-text {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .library {
+    position: static;
+    height: auto;
+    max-height: 240px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .shell.sidebar-collapsed {
+    grid-template-columns: 1fr;
   }
 }
