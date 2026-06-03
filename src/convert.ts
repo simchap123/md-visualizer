@@ -1,7 +1,10 @@
 // Turn non-markdown files into markdown the viewer can render:
-//   .sql        -> a fenced `sql` code block
+//   .sql        -> a structured schema view (ER diagram + per-table columns)
+//                  when it contains CREATE TABLE; otherwise a `sql` code block
 //   .tsv / .csv -> a GitHub-flavored markdown table
 // Anything else (md/markdown/mdx/txt) is passed through unchanged.
+
+import { parseSchema, schemaToMarkdown } from "./sql";
 
 function parseDelimited(text: string, delim: string): string[][] {
   const rows: string[][] = [];
@@ -67,7 +70,10 @@ function delimitedToTable(text: string, delim: string): string {
 
 export function toRenderableMarkdown(raw: string, fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();
-  if (ext === "sql") return "```sql\n" + raw.replace(/\n$/, "") + "\n```";
+  if (ext === "sql") {
+    const schema = schemaToMarkdown(parseSchema(raw), fileName);
+    return schema ?? "```sql\n" + raw.replace(/\n$/, "") + "\n```";
+  }
   if (ext === "tsv") return delimitedToTable(raw, "\t");
   if (ext === "csv") return delimitedToTable(raw, ",");
   return raw;
