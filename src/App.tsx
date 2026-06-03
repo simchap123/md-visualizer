@@ -52,19 +52,32 @@ export default function App() {
     window.scrollTo({ top: 0 });
   }, []);
 
-  const loadFile = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result ?? "");
-      setContent(text);
-      setFileName(file.name);
-      setFileSize(file.size);
-      const { id, history } = addEntry(file.name, file.size, text);
-      setActiveId(id);
+  const loadFiles = useCallback((files: File[]) => {
+    if (!files.length) return;
+    const readText = (file: File) =>
+      new Promise<{ file: File; text: string }>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ file, text: String(reader.result ?? "") });
+        reader.readAsText(file);
+      });
+
+    Promise.all(files.map(readText)).then((results) => {
+      let history: HistoryEntry[] = [];
+      let first: { id: string; file: File; text: string } | null = null;
+      for (const { file, text } of results) {
+        const res = addEntry(file.name, file.size, text);
+        history = res.history;
+        if (!first) first = { id: res.id, file, text };
+      }
       setHistory(history);
-      window.scrollTo({ top: 0 });
-    };
-    reader.readAsText(file);
+      if (first) {
+        setContent(first.text);
+        setFileName(first.file.name);
+        setFileSize(first.file.size);
+        setActiveId(first.id);
+        window.scrollTo({ top: 0 });
+      }
+    });
   }, []);
 
   const reset = useCallback(() => {
@@ -91,10 +104,10 @@ export default function App() {
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragging(false);
-      const file = e.dataTransfer.files?.[0];
-      if (file) loadFile(file);
+      const files = Array.from(e.dataTransfer.files ?? []);
+      if (files.length) loadFiles(files);
     },
-    [loadFile]
+    [loadFiles]
   );
 
   // Accept a dragged file anywhere in the window once a doc is open.
@@ -214,10 +227,11 @@ export default function App() {
           ref={inputRef}
           type="file"
           accept=".md,.markdown,.mdx,.txt,text/markdown"
+          multiple
           hidden
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) loadFile(f);
+            const files = Array.from(e.target.files ?? []);
+            if (files.length) loadFiles(files);
             e.target.value = "";
           }}
         />
