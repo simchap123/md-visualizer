@@ -6,6 +6,7 @@ import rehypeSlug from "rehype-slug";
 import { Mermaid } from "./Mermaid";
 import { parseHeadings } from "./markdown";
 import { structureToMermaid } from "./diagram";
+import { toRenderableMarkdown } from "./convert";
 import {
   addEntry,
   clearHistory,
@@ -139,7 +140,11 @@ export default function App() {
     );
   }, [history, query]);
 
-  const toc = useMemo(() => (content ? parseHeadings(content) : []), [content]);
+  const markdown = useMemo(
+    () => (content ? toRenderableMarkdown(content, fileName) : ""),
+    [content, fileName]
+  );
+  const toc = useMemo(() => (markdown ? parseHeadings(markdown) : []), [markdown]);
   const structureChart = useMemo(
     () => (toc.length ? structureToMermaid(toc, fileName) : null),
     [toc, fileName]
@@ -211,7 +216,7 @@ export default function App() {
           title="Drop a .md file or click to browse"
         >
           <span className="dropstrip-icon">⬆</span>
-          <span className="dropstrip-text">Drop a new .md here</span>
+          <span className="dropstrip-text">Drop a new file here</span>
         </div>
 
         {fileName && (
@@ -226,7 +231,7 @@ export default function App() {
         <input
           ref={inputRef}
           type="file"
-          accept=".md,.markdown,.mdx,.txt,text/markdown"
+          accept=".md,.markdown,.mdx,.txt,.sql,.tsv,.csv,text/markdown"
           multiple
           hidden
           onChange={(e) => {
@@ -313,10 +318,13 @@ export default function App() {
                 tabIndex={0}
               >
                 <div className="dz-icon">⬆</div>
-                <div className="dz-title">Drop a .md file here</div>
-                <div className="dz-sub">or click to browse</div>
+                <div className="dz-title">Drop a file here</div>
+                <div className="dz-sub">
+                  .md · .sql · .csv · .tsv — or click to browse
+                </div>
                 <ul className="dz-feats">
                   <li>📊 Tables rendered cleanly</li>
+                  <li>🗃️ SQL, CSV &amp; TSV rendered too</li>
                   <li>🧜 Mermaid diagrams drawn automatically</li>
                   <li>🧭 Auto table of contents</li>
                 </ul>
@@ -361,7 +369,7 @@ export default function App() {
                   rehypePlugins={[rehypeRaw, rehypeSlug]}
                   components={components}
                 >
-                  {content}
+                  {markdown}
                 </ReactMarkdown>
               </main>
             </div>
